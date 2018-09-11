@@ -1,7 +1,7 @@
 Formula Trend Sample Code
 
 ## Requirement and Environment
--Python 2.7
+-Running on Python 3.65
 -pip install pillow
 -pip install flask-socketio
 -pip install opencv-python
@@ -9,5 +9,4 @@ Formula Trend Sample Code
 
 ## How to execute
 Enable the car simulator first by double click
-Run drive.py 
-
+Run drive.py

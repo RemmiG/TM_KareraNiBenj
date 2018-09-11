@@ -1,11 +1,3 @@
-#!env python2
-#
-# Auto-driving Bot
-#
-# Revision:      v1.2
-# Released Date: Aug 20, 2018
-#
-
 from time import time
 from PIL  import Image
 from io   import BytesIO
