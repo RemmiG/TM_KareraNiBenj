@@ -1,3 +1,11 @@
+#!env python2
+#
+# Auto-driving Bot
+#
+# Revision:      v1.2
+# Released Date: Aug 20, 2018
+#
+
 from time import time
 from PIL  import Image
 from io   import BytesIO
@@ -318,12 +326,12 @@ class ImageProcessor(object):
 
         if debug:
             #draw the steering direction
-            r = 60
+            r = 80
             x = image_width / 2 + int(r * math.cos(steering_angle))
             y = image_height    - int(r * math.sin(steering_angle))
-            cv2.line(img, (image_width / 2, image_height), (x, y), (255, 0, 255), 2)
-            logit("line angle: %0.2f, steering angle: %0.2f, last steering angle: %0.2f" % (ImageProcessor.rad2deg(best_thetaA), ImageProcessor.rad2deg(np.pi/2-steering_angle), ImageProcessor.rad2deg(np.pi/2-last_steering_angle)))
-
+            cv2.line(img, (int(image_width / 2), int(image_height)), (int (x), int(y)), (0, 255, 255), 2)
+            logit("steering angle: %0.2f, last steering angle: %0.2f" % (ImageProcessor.rad2deg(steering_angle), ImageProcessor.rad2deg(np.pi/2-last_steering_angle)))
+            
         return (np.pi/2 - steering_angle)
 
 
@@ -349,29 +357,34 @@ class ImageProcessor(object):
         steering_angle = math.atan2(image_height, (px - camera_x))
 
         if debug:
-            #draw the steering direction
-            r = 60
+            r = 80
             x = (image_width / 2 + (r * math.cos(steering_angle)))
-            y = (image_height    - (r * math.sin(steering_angle)))
-            cv2.line(img, (int(image_width / 2), image_height), (int(x), int(y)), (255, 0, 255), 2)
+            y = (image_height - (r * math.sin(steering_angle)))
+            cv2.line(img, (int(image_width / 2), int(image_height)), (int (x), int(y)), (0, 255, 255), 2)
             logit("steering angle: %0.2f, last steering angle: %0.2f" % (ImageProcessor.rad2deg(steering_angle), ImageProcessor.rad2deg(np.pi/2-last_steering_angle)))
-
-        return (np.pi/2 - steering_angle) * 2.0
+            #steering direction (R)
+            r = 80
+            x = (image_width / 2 + (r * math.cos(steering_angle)))
+            y = (image_height  - (r * math.sin(steering_angle)))
+            cv2.line(img, (int(image_width), int(image_height)), (int (x), int(y)), (255, 0, 255), 2)
+            logit("steering angle: %0.2f, last steering angle: %0.2f" % (ImageProcessor.rad2deg(steering_angle), ImageProcessor.rad2deg(np.pi/2-last_steering_angle)))
+                        
+        return (np.pi/2 - steering_angle) #* 2.0
 
 class AutoDrive(object):
-    STEERING_PID_Kp             = 0.3
-    STEERING_PID_Ki             = 0.01
-    STEERING_PID_Kd             = 0.1
+    STEERING_PID_Kp             = 0.25 #max: 3
+    STEERING_PID_Ki             = 0.03 #max: 0.1
+    STEERING_PID_Kd             = 0.05 #max:0.1
     STEERING_PID_max_integral   = 10
-    THROTTLE_PID_Kp             = 0.02
-    THROTTLE_PID_Ki             = 0.005
-    THROTTLE_PID_Kd             = 0.02
-    THROTTLE_PID_max_integral   = 0.5
-    MAX_STEERING_HISTORY        = 3
-    MAX_THROTTLE_HISTORY        = 3
-    DEFAULT_SPEED               = 1.
-
-    debug = True
+    THROTTLE_PID_Kp             = 0.02 #0.02 #reverse wheel
+    THROTTLE_PID_Ki             = 0.009 #.005 #gradual speed increase
+    THROTTLE_PID_Kd             = 0.01 #0.02 #reverse wheel
+    THROTTLE_PID_max_integral   = 0.5 
+    MAX_STEERING_HISTORY        = 2 # min: 3 
+    MAX_THROTTLE_HISTORY        = 5 # min: 3
+    DEFAULT_SPEED               = 3.13  #max:4 mid: 3 min: 2
+	
+    debug = False
 
     def __init__(self, car, record_folder = None):
         self._record_folder    = record_folder
@@ -387,7 +400,6 @@ class AutoDrive(object):
     def on_dashboard(self, src_img, last_steering_angle, speed, throttle, info):
         track_img     = ImageProcessor.preprocess(src_img)
         current_angle = ImageProcessor.find_steering_angle_by_color(track_img, last_steering_angle, debug = self.debug)
-        #current_angle = ImageProcessor.find_steering_angle_by_line(track_img, last_steering_angle, debug = self.debug)
         steering_angle = self._steering_pid.update(-current_angle)
         throttle       = self._throttle_pid.update(speed)
 
@@ -425,7 +437,6 @@ class Car(object):
 
 
     def on_dashboard(self, dashboard):
-        #normalize the units of all parameters
         last_steering_angle = np.pi/2 - float(dashboard["steering_angle"]) / 180.0 * np.pi
         throttle            = float(dashboard["throttle"])
         speed               = float(dashboard["speed"])
@@ -446,7 +457,6 @@ class Car(object):
 
 
     def control(self, steering_angle, throttle):
-        #convert the values with proper units
         steering_angle = min(max(ImageProcessor.rad2deg(steering_angle), -Car.MAX_STEERING_ANGLE), Car.MAX_STEERING_ANGLE)
         self._control_function(steering_angle, throttle)
 
@@ -502,7 +512,3 @@ if __name__ == "__main__":
 
     app = socketio.Middleware(sio, Flask(__name__))
     eventlet.wsgi.server(eventlet.listen(('', 4567)), app)
-
-
-# vim: set sw=4 ts=4 et :
-
