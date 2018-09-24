@@ -1,0 +1,4 @@
+pillow
+flask-socketio
+opencv-python
+eventlet
